@@ -1,0 +1,106 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+
+/*
+Producer: 1 Parent bird produces W worms each time
+-Put W worms to dish
+-Wait until dish empty
+
+Consumers: n Baby birds
+-Eats 1 worm from shared dish
+-Sleeps
+-Repeats
+-if dish empty --> wake Parent bird (producer)
+
+print: 
+When bird eats a worm (+thread no)
+When dish empty
+When parent bird gets woken
+
+Shared resource: Dish of worms
+-max 1 bird can access the worms at one time
+
+*/
+
+#define W 10
+
+sem_t mutex;
+sem_t parent_sem;
+
+int worms = W;
+int num_babies = 5;
+
+void* parent_bird(void *arg){
+    while (1)
+    {
+        sem_wait(&parent_sem);
+        sem_wait(&mutex);
+        worms = W;
+        printf("Parent bird refilled %d worms\n", W);
+        sem_post(&mutex);
+    }
+    return NULL;
+
+}
+
+void* baby_bird(void* arg){
+    int thread_id = *(int*)arg;
+
+    while (1)
+    {
+        sem_wait(&mutex);
+
+        if(worms == 0){
+            printf("Worm bowl empty!\n");
+            printf("Baby bird %d wakes parent\n", thread_id);
+            sem_post(&mutex);
+            sem_post(&parent_sem);
+            sleep(1);
+        } else {
+            worms--;
+            printf("Baby bird %d ate 1 worm\n", thread_id);
+            sem_post(&mutex);
+            sleep(1);
+        }
+    }
+    return NULL;
+
+
+}
+
+int main(int argc, char* argv[]){
+    if(argc < 2){
+        printf("Usage: %s + num of baby birds\n", argv[0]);
+        printf("Number of baby birds: %d, Number of worms: %d\n", num_babies, W);
+    } else {
+        num_babies = atoi(argv[1]);
+        printf("Number of baby birds: %d, Number of worms: %d\n", num_babies, W);
+    }
+
+    sem_init(&mutex, 0, 1);
+    sem_init(&parent_sem, 0, 0); //skål startar full --> mamma sover
+
+    pthread_t parent_thread;
+    pthread_t baby_threads[num_babies];
+    int ids[num_babies];
+
+    pthread_create(&parent_thread,NULL, parent_bird, NULL);
+    for(int i = 0; i < num_babies; i++){
+        ids[i]= i;
+        pthread_create(&baby_threads[i], NULL, baby_bird, &ids[i]);
+    }
+
+    pthread_join(parent_thread, NULL);
+    for(int i = 0; i < num_babies; i++){
+        pthread_join(baby_threads[i],NULL);
+    }
+
+    sem_destroy(&mutex);
+    sem_destroy(&parent_sem);
+
+
+}
