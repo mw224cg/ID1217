@@ -4,6 +4,8 @@
  * Programmets monitor, synkroniserar reparatörens arbete och väntkön.
  * Har en counter för totalt antal fria platser.
  * Har en counter för varje fordonstyps fria platser.
+ * 
+ * 
  */
 
 public class RepairStation {
@@ -27,14 +29,15 @@ public class RepairStation {
     /**
      * Fordonet vill repareras, kontrollerar om det finns plats både totalt och för fordonstypen. Om inte, vänta tills en plats blir ledig.
      * @param type fordonstypen som vill repareras (A, B, C)
-     * @throws InterruptedException
      */
     public synchronized void requestRepair(VehicleType type) throws InterruptedException {
         while(!canRepair(type)){
+            log("WAIT", type);
             wait();
         }
 
         enterStation(type);
+        log("REPAIR", type);
     }
 
     /**
@@ -43,6 +46,7 @@ public class RepairStation {
      */
     public synchronized void releaseRepair(VehicleType type) {
         leaveStation(type);
+        log("EXIT", type);
         notifyAll();
     }
 
@@ -57,18 +61,11 @@ public class RepairStation {
         }
 
         switch(type){ //kontroll för varje fordonstyp
-            case A:
-                return countA < maxA;
-            case B:
-                return countB < maxB;
-            case C:
-                return countC < maxC;
-            default:
-                return false;
+            case A: return countA < maxA;
+            case B: return countB < maxB;
+            case C: return countC < maxC;
+            default: return false;
         }
-
-
-
     }
 
     /**
@@ -78,15 +75,9 @@ public class RepairStation {
     private void enterStation(VehicleType type){
         totalCount++;
         switch(type){
-            case A:
-                countA++;
-                break;
-            case B:
-                countB++;
-                break;
-            case C:
-                countC++;
-                break;
+            case A: countA++; break;
+            case B: countB++; break;
+            case C: countC++; break;
         }
     }
 
@@ -97,16 +88,23 @@ public class RepairStation {
     private void leaveStation(VehicleType type) {
         totalCount--;
         switch(type){
-            case A:
-                countA--;
-                break;
-            case B:
-                countB--;
-                break;
-            case C:
-                countC--;
-                break;
+            case A: countA--; break;
+            case B: countB--; break;
+            case C: countC--; break;
         }
+    }
+
+    private void log(String event, VehicleType type){
+        System.out.printf(
+            "%-7s : %s | %-10s | A=%d/%d, ,B=%d/%d, C=%d/%d, TOTAL = %d/%d\n",
+            event,
+            type,
+            Thread.currentThread().getName(),
+            countA, maxA,
+            countB, maxB,
+            countC, maxC,
+            totalCount, maxTotal
+        );
     }
 
     
