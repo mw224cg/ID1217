@@ -20,10 +20,10 @@ public class TeacherServer {
         System.out.println("Class Size: " + classSize);
     }
 
-    public void start() throws IOException{
+    public void start(TeacherServer teacherServer) throws IOException{
         while (true) { 
             Socket socket = serverSocket.accept();
-            Thread clientThread = new Thread(new ClientHandler(socket, this));
+            Thread clientThread = new Thread(new ClientHandler(socket, teacherServer));
             clientThread.start();
         }
     }
@@ -112,6 +112,6 @@ public class TeacherServer {
 
     public static void main(String[] args) throws IOException {
         TeacherServer server = new TeacherServer(5001, 5);
-        server.start();
+        server.start(server);
     }
 }
